@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Class Manager</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            /* Extra padding at bottom so content isn't hidden behind fixed footer */
+            padding-bottom: 100px; 
+        }
+
+        /* --- Header (Sticky) --- */
+        header {
+            background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand h1 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+        .brand p { margin: 0; font-size: 0.75rem; opacity: 0.9; }
+
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #cbd5e1; border: 2px solid rgba(255,255,255,0.2);
+        }
+        .status-dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+
+        /* --- Controls --- */
+        .controls {
+            padding: 15px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .row { display: flex; gap: 10px; }
+        .grow { flex-grow: 1; }
+
+        select, input {
+            width: 100%; padding: 12px;
+            border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 1rem; background: white;
+        }
+
+        button {
+            padding: 12px 16px; border: none; border-radius: 8px;
+            font-weight: 600; font-size: 0.95rem;
+            display: flex; justify-content: center; align-items: center; gap: 5px;
+            cursor: pointer; transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.96); }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-icon { padding: 10px; font-size: 1.2rem; line-height: 1;}
+
+        /* --- Table --- */
+        .table-wrapper {
+            overflow-x: auto; background: var(--surface);
+            margin-top: 10px; border-top: 1px solid var(--border);
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+
+        th, td {
+            padding: 14px 10px; border-bottom: 1px solid var(--border);
+            white-space: nowrap; text-align: center;
+        }
+
+        /* Sticky First Column */
+        th:first-child, td:first-child {
+            position: sticky; left: 0;
+            background: var(--surface);
+            z-index: 10; border-right: 2px solid #f1f5f9;
+            text-align: left; min-width: 140px; max-width: 140px;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        th:first-child { z-index: 20; background: #f8fafc; }
+        th { background: #f8fafc; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+
+        .student-name { font-weight: 600; display: block; font-size: 0.9rem; }
+        .student-phone { font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;}
+
+        input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--primary); }
+
+        .badge {
+            padding: 8px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+        }
+        .paid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .unpaid { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* --- Fixed Footer --- */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            z-index: 90;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Modals --- */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: none; justify-content: center; align-items: flex-end;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; animation: slideUp 0.3s; }
+        .modal-content {
+            background: white; width: 100%; max-width: 500px;
+            border-radius: 20px 20px 0 0; padding: 25px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        }
+        @media(min-width: 600px) {
+            .modal { align-items: center; }
+            .modal-content { border-radius: 12px; width: 400px; }
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+
+        .hidden { display: none !important; }
+        .loading-screen { position: fixed; inset: 0; background: white; z-index: 2000; display: flex; justify-content: center; align-items: center; flex-direction: column;}
+        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px;}
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="loading-screen">
+        <div class="spinner"></div>
+        <div style="color:#64748b; font-size:0.9rem;">Connecting...</div>
+    </div>
+
+    <header>
+        <div class="brand">
+            <h1>Thilina Dasanayaka</h1>
+            <p>Class Manager</p>
+        </div>
+        <div id="statusIndicator" class="status-dot"></div>
+    </header>
+
+    <div class="controls">
+        <div class="row">
+            <select id="classSelect" onchange="switchClassView()" class="grow">
+                <option value="">Loading...</option>
+            </select>
+            <button class="btn-success btn-icon" onclick="openModal('classModal')">+</button>
+        </div>
+
+        <div id="dashboardControls" class="hidden">
+            <div class="row" style="margin-top:10px;">
+                <input type="month" id="monthPicker" onchange="renderTable()" class="grow">
+            </div>
+            <div class="row" style="margin-top:10px;">
+                <button class="btn-primary grow" onclick="openModal('studentModal')">Add Student</button>
+                <button class="btn-primary grow" onclick="openDateModal()">Add Date</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tableContainer" class="table-wrapper hidden">
+        <table id="mainTable">
+            <thead><tr id="tableHead"></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        
+        <div id="emptyMsg" style="padding:40px; text-align:center; color:#94a3b8;" class="hidden">
+            No students found for this month.
+        </div>
+    </div>
+
+    <footer>
+        Developed by <strong>Randun Labz</strong>
+    </footer>
+
+    <div id="classModal" class="modal">
+        <div class="modal-content">
+            <h3>Create New Class</h3>
+            <div class="form-group"><label>Class Name</label><input type="text" id="newClassName" placeholder="e.g. Grade 11 Math"></div>
+            <div class="row"><button class="btn-danger grow" onclick="closeModal('classModal')">Cancel</button><button class="btn-primary grow" onclick="createClass()">Create</button></div>
+        </div>
+    </div>
+
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <h3>Add Student</h3>
+            <div class="form-group"><label>Name</label><input type="text" id="newStudentName" placeholder="Full Name"></div>
+            <div class="form-group"><label>Parent Phone (for SMS)</label><input type="tel" id="newStudentPhone" placeholder="0771234567"></div>
+            <div class="form-group"><label>Join Month</label><input type="month" id="newStudentJoinDate"></div>
+            <div class="row"><button class="btn-danger grow" onclick="closeModal('studentModal')">Cancel</button><button class="btn-primary grow" onclick="addStudent()">Save</button></div>
+        </div>
+    </div>
+
+    <div id="dateModal" class="modal">
+        <div class="modal-content">
+            <h3>Add Date</h3>
+            <div class="form-group"><label>Select Date</label><input type="date" id="newDateVal"></div>
+            <div class="row"><button class="btn-danger grow" onclick="closeModal('dateModal')">Cancel</button><button class="btn-primary grow" onclick="addDate()">Add</button></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // ==========================================
+        // PASTE YOUR FIREBASE CONFIG HERE
+        // ==========================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyAH96DvWSPBX5ODO0elz9t3A2y2e8-KRRg",
+  authDomain: "nanadahara-c5735.firebaseapp.com",
+  databaseURL: "https://nanadahara-c5735-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nanadahara-c5735",
+  storageBucket: "nanadahara-c5735.firebasestorage.app",
+  messagingSenderId: "646704617972",
+  appId: "1:646704617972:web:38ba6dc500c78d70ae01a1",
+  measurementId: "G-09WEBN0S5J"
+};
+        // ==========================================
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dataRef = ref(db, 'teacherApp_Mobile_v2'); // Use v2
+
+        let appData = { classes: [], currentId: null };
+
+        onValue(dataRef, (snapshot) => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('statusIndicator').classList.add('online');
+            const data = snapshot.val();
+            if(data) {
+                appData = data;
+                if(!appData.classes) appData.classes = [];
+                updateDropdown();
+                if(appData.currentId) renderTable();
+            } else {
+                appData = { classes: [], currentId: null };
+                save();
+            }
+        });
+
+        function save() { set(dataRef, appData); }
+
+        window.onload = () => { document.getElementById('monthPicker').value = new Date().toISOString().slice(0, 7); };
+
+        window.createClass = function() {
+            const name = document.getElementById('newClassName').value;
+            if(!name) return;
+            if(!confirm(`Create class "${name}"?`)) return;
+            if(!appData.classes) appData.classes = [];
+            const newClass = { id: Date.now(), name, students: [], sessions: [] };
+            appData.classes.push(newClass);
+            appData.currentId = newClass.id;
+            save();
+            closeModal('classModal');
+            document.getElementById('newClassName').value = "";
+        };
+
+        window.addStudent = function() {
+            const name = document.getElementById('newStudentName').value;
+            const phone = document.getElementById('newStudentPhone').value;
+            const joined = document.getElementById('newStudentJoinDate').value;
+            if(!name || !joined) return alert("Required fields missing");
+            if(!confirm(`Add student "${name}"?`)) return;
+
+            const cls = getClass();
+            if(!cls.students) cls.students = [];
+            cls.students.push({ id: Date.now(), name, phone, joinedMonth: joined, attendance: {}, fees: {} });
+            save();
+            closeModal('studentModal');
+            document.getElementById('newStudentName').value = "";
+            document.getElementById('newStudentPhone').value = "";
+        };
+
+        window.addDate = function() {
+            const d = document.getElementById('newDateVal').value;
+            if(!d) return;
+            const cls = getClass();
+            if(!cls.sessions) cls.sessions = [];
+            if(!cls.sessions.includes(d)) { cls.sessions.push(d); cls.sessions.sort(); save(); }
+            closeModal('dateModal');
+        };
+
+        window.toggleFee = function(id) {
+            const m = document.getElementById('monthPicker').value;
+            const s = getStudent(id);
+            if(!s.fees) s.fees = {};
+
+            if(s.fees[m]) {
+                if(confirm(`Mark ${s.name} as UNPAID?`)) {
+                    delete s.fees[m];
+                    save();
+                }
+            } else {
+                if(confirm(`Mark ${s.name} as PAID?`)) {
+                    s.fees[m] = true;
+                    save();
+                    
+                    // --- SMS LOGIC ---
+                    if(s.phone) {
+                        const msg = `Dear Parent, fee for ${s.name} for ${m} is received. Thank you.`;
+                        // Using 'sms:' protocol with 'body' parameter
+                        const cleanPhone = s.phone.replace(/[^0-9+]/g, '');
+                        window.location.href = `sms:${cleanPhone}?body=${encodeURIComponent(msg)}`;
+                    }
+                }
+            }
+        };
+
+        window.toggleAtt = function(id, date) {
+            const s = getStudent(id);
+            if(!s.attendance) s.attendance = {};
+            if(s.attendance[date]) delete s.attendance[date]; else s.attendance[date] = true;
+            save();
+        };
+
+        window.deleteStudent = function(id) {
+            if(confirm(`⚠️ REMOVE STUDENT?\nThis cannot be undone.`)) {
+                const cls = getClass();
+                cls.students = cls.students.filter(st => st.id !== id);
+                save();
+            }
+        };
+
+        window.switchClassView = function() {
+            const val = document.getElementById('classSelect').value;
+            if(val) {
+                appData.currentId = parseInt(val);
+                save();
+                renderTable();
+                document.getElementById('dashboardControls').classList.remove('hidden');
+                document.getElementById('tableContainer').classList.remove('hidden');
+            } else {
+                appData.currentId = null;
+                document.getElementById('dashboardControls').classList.add('hidden');
+                document.getElementById('tableContainer').classList.add('hidden');
+            }
+        };
+
+        function updateDropdown() {
+            const sel = document.getElementById('classSelect');
+            sel.innerHTML = '<option value="">-- Select Class --</option>';
+            if(appData.classes) {
+                appData.classes.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    if(c.id == appData.currentId) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }
+            if(appData.currentId) {
+                document.getElementById('dashboardControls').classList.remove('hidden');
+                document.getElementById('tableContainer').classList.remove('hidden');
+                renderTable();
+            }
+        }
+
+        window.renderTable = function() {
+            const cls = getClass();
+            if(!cls) return;
+            const currentMonth = document.getElementById('monthPicker').value;
+            const tbody = document.getElementById('tableBody');
+            const thead = document.getElementById('tableHead');
+            tbody.innerHTML = ''; thead.innerHTML = '';
+
+            const students = (cls.students || []).filter(s => currentMonth >= s.joinedMonth);
+            const sessions = (cls.sessions || []).filter(d => d.startsWith(currentMonth));
+
+            if(students.length === 0) {
+                document.getElementById('emptyMsg').classList.remove('hidden');
+                document.getElementById('mainTable').classList.add('hidden');
+                return;
+            }
+            document.getElementById('emptyMsg').classList.add('hidden');
+            document.getElementById('mainTable').classList.remove('hidden');
+
+            let headHtml = `<th>Student</th><th>Fees</th>`;
+            sessions.forEach(d => { headHtml += `<th>${d.split('-')[2]}</th>`; });
+            headHtml += `<th>Del</th>`;
+            thead.innerHTML = headHtml;
+
+            students.forEach(s => {
+                if(!s.fees) s.fees = {};
+                if(!s.attendance) s.attendance = {};
+                const tr = document.createElement('tr');
+                const isPaid = s.fees[currentMonth];
+                const badge = isPaid ? `<div class="badge paid" onclick="toggleFee(${s.id})">PAID</div>` : `<div class="badge unpaid" onclick="toggleFee(${s.id})">PAY</div>`;
+
+                let attHtml = '';
+                sessions.forEach(date => {
+                    const checked = s.attendance[date] ? 'checked' : '';
+                    attHtml += `<td><input type="checkbox" ${checked} onchange="toggleAtt(${s.id}, '${date}')"></td>`;
+                });
+
+                tr.innerHTML = `<td><span class="student-name">${s.name}</span><span class="student-phone">${s.phone || ''}</span></td><td>${badge}</td>${attHtml}<td><button class="btn-danger btn-icon" onclick="deleteStudent(${s.id})">×</button></td>`;
+                tbody.appendChild(tr);
+            });
+        };
+
+        function getClass() { return appData.classes.find(c => c.id === appData.currentId); }
+        function getStudent(id) { return getClass().students.find(s => s.id === id); }
+
+        window.openModal = (id) => {
+            document.getElementById(id).classList.add('active');
+            const m = document.getElementById('monthPicker').value;
+            if(id === 'studentModal') document.getElementById('newStudentJoinDate').value = m;
+            if(id === 'dateModal') document.getElementById('newDateVal').value = m + "-01";
+        };
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+        window.openDateModal = () => window.openModal('dateModal');
+    </script>
+</body>
+</html>
